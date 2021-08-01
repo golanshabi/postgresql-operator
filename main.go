@@ -38,7 +38,7 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme = runtime.NewScheme()
 )
 
 const (
@@ -67,7 +67,6 @@ func doMain() int {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -82,7 +81,6 @@ func doMain() int {
 		log.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
 	databaseURL, found := os.LookupEnv(environmentVariableDatabaseURL)
 	if !found {
 		log.Error(nil, "Not found:", "environment variable", environmentVariableDatabaseURL)
@@ -97,9 +95,9 @@ func doMain() int {
 	defer dbConnectionPool.Close()
 
 	if err = (&controllers.PostgreSQLReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("PostgreSQL"),
-		Scheme: mgr.GetScheme(),
+		Client:                 mgr.GetClient(),
+		Log:                    ctrl.Log.WithName("controllers").WithName("PostgreSQL"),
+		Scheme:                 mgr.GetScheme(),
 		DatabaseConnectionPool: dbConnectionPool,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "PostgreSQL")
@@ -115,7 +113,6 @@ func doMain() int {
 		log.Error(err, "unable to set up ready check")
 		return 1
 	}
-
 	log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		log.Error(err, "problem running manager")
@@ -123,7 +120,6 @@ func doMain() int {
 	}
 	return 0
 }
-
 
 func main() {
 	os.Exit(doMain())

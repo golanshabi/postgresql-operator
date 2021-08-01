@@ -29,7 +29,7 @@ type PostgreSQLSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// since we dont know the fields or their types
-	Columns map[string]interface{} `json:"-"`
+	Columns map[string]string `json:"-"`
 }
 
 // PostgreSQLStatus defines the observed state of PostgreSQL

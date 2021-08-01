@@ -55,6 +55,7 @@ type PostgreSQLReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *PostgreSQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("PostgreSQL", req.NamespacedName)
+	log.Info("Reconciling")
 	var pSpec batchv1.PostgreSQL
 	var err error
 	if err = r.Get(ctx, req.NamespacedName, &pSpec); err != nil {
