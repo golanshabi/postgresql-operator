@@ -20,39 +20,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PostgreSQLSpec map[string]string
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// PostgreSQLSpec defines the desired state of PostgreSQL
-type PostgreSQLSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+//+kubebuilder:pruning:PreserveUnknownFields
+//+kubebuilder:validation:XPreserveUnknownFields
 
-	// since we dont know the fields or their types
-	Columns map[string]string `json:"-"`
-}
-
-// PostgreSQLStatus defines the observed state of PostgreSQL
-type PostgreSQLStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+// PostgreSQLStatus defines the observed state of PostgreSQL.
+type PostgreSQLStatus struct { // INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// PostgreSQL is the Schema for the postgresqls API
+// PostgreSQL is the Schema for the postgresqls API.
 type PostgreSQL struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   PostgreSQLSpec   `json:"spec,omitempty"`
 	Status PostgreSQLStatus `json:"status,omitempty"`
+	Spec   PostgreSQLSpec   `json:"spec,omitempty"`
+
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
 
-// PostgreSQLList contains a list of PostgreSQL
+// PostgreSQLList contains a list of PostgreSQL.
 type PostgreSQLList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

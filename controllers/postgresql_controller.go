@@ -19,11 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
+	batchv1 "postgresql-operator/api/v1"
+
 	"github.com/go-logr/logr"
 	"github.com/jackc/pgx/v4/pgxpool"
-
 	"k8s.io/apimachinery/pkg/runtime"
-	batchv1 "postgresql-operator/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,7 +34,7 @@ const (
 	deleteTable = "DROP TABLE IF EXISTS "
 )
 
-// PostgreSQLReconciler reconciles a PostgreSQL object
+// PostgreSQLReconciler reconciles a PostgreSQL object.
 type PostgreSQLReconciler struct {
 	client.Client
 	Log                    logr.Logger
@@ -46,7 +48,6 @@ type PostgreSQLReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
 // the PostgreSQL object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
@@ -56,8 +57,11 @@ type PostgreSQLReconciler struct {
 func (r *PostgreSQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("PostgreSQL", req.NamespacedName)
 	log.Info("Reconciling")
+
 	var pSpec batchv1.PostgreSQL
+
 	var err error
+
 	if err = r.Get(ctx, req.NamespacedName, &pSpec); err != nil {
 		log.Error(err, "unable to fetch operator")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
@@ -67,26 +71,38 @@ func (r *PostgreSQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	tablename := pSpec.ObjectMeta.GetName()
+
 	_, err = r.DatabaseConnectionPool.Exec(context.Background(), deleteTable+tablename)
 	if err != nil {
 		err = fmt.Errorf("failed to delete table during reinitialization because: %w", err)
 		log.Error(err, "deletion failed")
+
 		return ctrl.Result{}, err
 	}
+
 	newTableString := "CREATE TABLE " + tablename + " ("
-	for colName, colVal := range pSpec.Spec.Columns {
-		newTableString += fmt.Sprintf("\n%s %s, ", colName, colVal)
+	for colName, colVal := range pSpec.Spec {
+		newTableString += fmt.Sprintf("\n%s %s,", colName, colVal)
 	}
-	if len(pSpec.Spec.Columns) != 0 {
+
+	log.Info(strconv.Itoa(len(pSpec.Spec)))
+
+	if len(pSpec.Spec) != 0 {
 		newTableString = newTableString[:len(newTableString)-1]
 	}
+
 	newTableString += ")"
+
 	_, err = r.DatabaseConnectionPool.Exec(context.Background(), newTableString)
 	if err != nil {
 		err = fmt.Errorf("failed creating new table during reinitialization because:  %w", err)
 		log.Error(err, "creation failed")
+
 		return ctrl.Result{}, err
 	}
+
+	log.Info("Done Reconciling")
+
 	return ctrl.Result{}, nil
 }
 

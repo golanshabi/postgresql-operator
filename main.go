@@ -20,48 +20,50 @@ import (
 	"context"
 	"flag"
 	"os"
+	"postgresql-operator/controllers"
 
+	batchv1 "postgresql-operator/api/v1"
+
+	"github.com/go-logr/logr"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	batchv1 "postgresql-operator/api/v1"
-	"postgresql-operator/controllers"
-	//+kubebuilder:scaffold:imports
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var (
-	scheme = runtime.NewScheme()
-)
+var scheme = runtime.NewScheme()
 
 const (
 	environmentVariableDatabaseURL = "DATABASE_URL"
+	portNum                        = 9443
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(batchv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+	utilruntime.Must(batchv1.AddToScheme(scheme))
 }
 
 func doMain() int {
 	log := ctrl.Log.WithName("cmd")
+
 	var metricsAddr string
+
 	var enableLeaderElection bool
+
 	var probeAddr string
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -72,7 +74,7 @@ func doMain() int {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Port:                   portNum,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "a790ce0a.hub.docker.com",
@@ -81,18 +83,14 @@ func doMain() int {
 		log.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	databaseURL, found := os.LookupEnv(environmentVariableDatabaseURL)
-	if !found {
-		log.Error(nil, "Not found:", "environment variable", environmentVariableDatabaseURL)
-		return 1
-	}
 
-	dbConnectionPool, err := pgxpool.Connect(context.Background(), databaseURL)
-	if err != nil {
-		log.Error(err, "Failed to connect to the database")
-		return 1
-	}
+	dbConnectionPool, i, done := connectToDB(log)
+
 	defer dbConnectionPool.Close()
+
+	if done {
+		return i
+	}
 
 	if err = (&controllers.PostgreSQLReconciler{
 		Client:                 mgr.GetClient(),
@@ -101,24 +99,59 @@ func doMain() int {
 		DatabaseConnectionPool: dbConnectionPool,
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "PostgreSQL")
+
 		return 1
 	}
 	//+kubebuilder:scaffold:builder
 
+	i2, done2 := startManager(mgr, log)
+	if done2 {
+		return i2
+	}
+
+	return 0
+}
+
+func startManager(mgr manager.Manager, log logr.Logger) (int, bool) {
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up health check")
-		return 1
+
+		return 1, true
 	}
+
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		log.Error(err, "unable to set up ready check")
-		return 1
+
+		return 1, true
 	}
+
 	log.Info("starting manager")
+
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		log.Error(err, "problem running manager")
-		return 1
+
+		return 1, true
 	}
-	return 0
+
+	return 0, false
+}
+
+func connectToDB(log logr.Logger) (*pgxpool.Pool, int, bool) {
+	databaseURL, found := os.LookupEnv(environmentVariableDatabaseURL)
+	if !found {
+		log.Error(nil, "Not found:", "environment variable", environmentVariableDatabaseURL)
+
+		return nil, 1, true
+	}
+
+	dbConnectionPool, err := pgxpool.Connect(context.Background(), databaseURL)
+	if err != nil {
+		log.Error(err, "Failed to connect to the database")
+
+		return nil, 1, true
+	}
+
+	return dbConnectionPool, 0, false
 }
 
 func main() {
