@@ -2,7 +2,7 @@ apiVersion: batch.hub.docker.com/v1
 kind: PostgreSQL
 metadata:
   name: mytable
-  namespace: mynamespace
+  namespace: default
 spec:
   column1: int
   column2: text
