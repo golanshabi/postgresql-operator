@@ -19,7 +19,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: PostgreSQL is the Schema for the postgresqls API
+        description: PostgreSQL is the Schema for the postgresqls API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,11 +34,13 @@ spec:
           metadata:
             type: object
           spec:
-            description: PostgreSQLSpec defines the desired state of PostgreSQL
+            additionalProperties:
+              type: string
             type: object
           status:
-            description: PostgreSQLStatus defines the observed state of PostgreSQL
+            description: PostgreSQLStatus defines the observed state of PostgreSQL.
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
     storage: true
