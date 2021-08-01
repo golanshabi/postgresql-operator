@@ -35,8 +35,8 @@ const (
 // PostgreSQLReconciler reconciles a PostgreSQL object
 type PostgreSQLReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log                    logr.Logger
+	Scheme                 *runtime.Scheme
 	DatabaseConnectionPool *pgxpool.Pool
 }
 
@@ -66,19 +66,26 @@ func (r *PostgreSQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	tablename := pSpec.ObjectMeta.GetName()
-	_, err = r.DatabaseConnectionPool.Exec(context.Background(), deleteTable + tablename )
+	_, err = r.DatabaseConnectionPool.Exec(context.Background(), deleteTable+tablename)
 	if err != nil {
 		err = fmt.Errorf("failed to delete table during reinitialization because: %w", err)
 		log.Error(err, "deletion failed")
 		return ctrl.Result{}, err
 	}
-	for colName, colVal := range pSpec.Spec {
-
+	newTableString := "CREATE TABLE " + tablename + " ("
+	for colName, colVal := range pSpec.Spec.Columns {
+		newTableString += fmt.Sprintf("\n%s %s, ", colName, colVal)
 	}
-
-
-	// your logic here
-
+	if len(pSpec.Spec.Columns) != 0 {
+		newTableString = newTableString[:len(newTableString)-1]
+	}
+	newTableString += ")"
+	_, err = r.DatabaseConnectionPool.Exec(context.Background(), newTableString)
+	if err != nil {
+		err = fmt.Errorf("failed creating new table during reinitialization because:  %w", err)
+		log.Error(err, "creation failed")
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 

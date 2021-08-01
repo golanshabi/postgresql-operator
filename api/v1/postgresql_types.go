@@ -1,4 +1,4 @@
- /*
+/*
 Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,8 @@ type PostgreSQLSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of PostgreSQL. Edit postgresql_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// since we dont know the fields or their types
+	Columns map[string]interface{} `json:"-"`
 }
 
 // PostgreSQLStatus defines the observed state of PostgreSQL
