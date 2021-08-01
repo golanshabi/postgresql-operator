@@ -5,4 +5,3 @@ metadata:
   namespace: default
 spec:
   column1: int
-  column2: text
