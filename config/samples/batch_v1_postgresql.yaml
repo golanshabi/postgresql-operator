@@ -1,7 +1,8 @@
 apiVersion: batch.hub.docker.com/v1
 kind: PostgreSQL
 metadata:
-  name: postgresql-sample
+  name: mytable
+  namespace: mynamespace
 spec:
-  # Add fields here
-  foo: bar
+  column1: int
+  column2: text
